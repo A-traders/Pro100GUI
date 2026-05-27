@@ -121,4 +121,5 @@ def write_pro100_csv(
             cells.append("" if r.inp_mm is None else f"{r.inp_mm}")
         out_lines.append(";".join(cells))
     body = line_ending.join(out_lines) + line_ending
+    path.parent.mkdir(parents=True, exist_ok=True)
     path.write_bytes(_BOM_LE + body.encode("utf-16-le"))
