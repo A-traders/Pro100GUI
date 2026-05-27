@@ -1,0 +1,62 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# Virtual envs
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+Thumbs.db
+.DS_Store
+
+# Pytest / coverage
+.pytest_cache/
+.coverage
+htmlcov/
+
+# App-local data (never commit)
+.ea_cache/
+sessions/
+logs/
+results/
+*.log
+
+# MT5 artifacts (never commit)
+*.mq5
+*.ex5
+*.mqh
+*.set
+*.ini
+*.tst
+
+# PDF artifacts
+*.pdf
+
+# Bootstrap marker
+.bootstrap_done
