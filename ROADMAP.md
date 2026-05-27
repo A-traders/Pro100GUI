@@ -32,6 +32,7 @@ only:
 8. Layer 2.5 -- PdfRenderer (v005 layout) + PdfQC.
 9. Layer 3 -- EventBus, SessionState (JSON-persisted), Orchestrator.
 10. Layer 4 -- PySide6 main window with 4 screens + Qt worker thread.
+11. Resume UI -- startup dialog offering to continue an unfinished session.
 
 ---
 
@@ -68,6 +69,14 @@ These are the choices that aren't obvious from the code alone.
 - **Persistence**: SessionState is rewritten as JSON after every
   phase, so a crashed run can resume. AppSettings (paths, EA file,
   Telegram URL) lives under `%APPDATA%\Pro100GUI\settings.json`.
+- **Resume UX: startup dialog, not a sidebar button**. On launch
+  MainWindow checks `settings.last_session_path`; if the file
+  exists and has PENDING/RUNNING jobs, a QMessageBox offers
+  Resume / New / Cancel. This is the only resume entry point --
+  there is no "Resume" button on the Run tab. Reason: a button
+  would imply resume is normal flow; in practice it only matters
+  after a crash or forced shutdown, so a startup question is the
+  natural touchpoint.
 - **Three rubejs against EA-file leak**: `.gitignore` ignores
   `.mq5/.ex5/.mqh/.set/.ini/.tst`; `tools/hooks/pre-commit` rejects
   staged files with those extensions at commit time; the
@@ -121,35 +130,36 @@ pro100gui/
 
 ## Next steps (prioritized)
 
-1. **PyInstaller .exe packaging** (~half-day).
-   Single-file executable so users don't have to install Python.
-   Verify that PySide6's Qt plugins are bundled, that bootstrap is
-   bypassed (deps already inside .exe).
-2. **Resume UI in GUI** (~2 hours).
-   Settings.last_session_path is already populated. Add a "Resume
-   last session" button on the Run tab that calls Orchestrator.resume.
-3. **Pytest-qt-based GUI tests** (~half-day).
+1. **Pytest-qt-based GUI tests** (~half-day).
    Smoke-test each screen's interaction without real MT5: config
    form -> Start -> verify worker is spawned with the right config;
-   etc.
-4. **EA _009 delegation to mql-dev** (~external).
+   resume dialog -> Resume -> verify worker.resume_run called; etc.
+2. **EA _009 delegation to mql-dev** (~external).
    See `project_pro100gui_ea_v009.md` memory. Out of scope for this
    project until the new EA is published in the Telegram channel.
-5. **MM-sweep wiring + 9-column PDF** (~1-2 days, after EA _009).
+3. **MM-sweep wiring + 9-column PDF** (~1-2 days, after EA _009).
    Adds:
    - `FilesStaging.write_addfr_config(dname, profile)` to put the
      constants file next to `pro100.csv` before each phase.
    - New PdfRenderer mode for the v013 layout (TWR / Mo-to-x11 /
      dup-paired highlight).
    - `merge_v005_v009` in core (currently deferred).
-6. **EA download automation** (optional, ~half-day).
+4. **EA download automation** (optional, ~half-day).
    Could replace manual download with Telethon if user later
    provides API_ID/HASH. Currently a deliberate "no" -- documented
    above.
-7. **Cross-machine portability** (optional).
+5. **Cross-machine portability** (optional).
    `MT5Paths` defaults assume the developer's machine layout.
    For other users, the Settings screen already exposes both paths;
    no code change needed unless we want auto-detect heuristics.
+6. **PyInstaller .exe packaging** (NOT recommended without code signing).
+   A single-file .exe removes the Python-install step, but an
+   unsigned exe triggers SmartScreen at first run. Removing that
+   warning needs an EV code-signing certificate (~$300-700/year +
+   USB token + company verification). The current `.pyw` runs under
+   the PSF-signed `pythonw.exe`, so SmartScreen is silent. Park
+   this item until either signing is available or the Python
+   prerequisite becomes a real complaint.
 
 ---
 

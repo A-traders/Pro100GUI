@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PySide6.QtCore import QThread, Slot
+from PySide6.QtCore import QThread, QTimer, Slot
 from PySide6.QtWidgets import (
     QMainWindow,
     QMessageBox,
@@ -22,10 +22,16 @@ from pro100gui.app.settings_store import (
     AppSettings,
     default_settings_path,
     load_settings,
+    save_settings,
 )
 from pro100gui.core.models import RunConfig
 from pro100gui.orchestrator.events import EventBus
 from pro100gui.orchestrator.orchestrator import Orchestrator
+from pro100gui.orchestrator.session import (
+    JobStatus,
+    SessionState,
+    load_session,
+)
 
 from .screen_config import ConfigScreen
 from .screen_results import ResultsScreen
@@ -66,6 +72,9 @@ class MainWindow(QMainWindow):
         self.run_screen.cancelRequested.connect(self._on_cancel)
         self.settings_screen.settingsChanged.connect(self._on_settings_changed)
 
+        # Offer Resume dialog once the event loop is running.
+        QTimer.singleShot(0, self._offer_resume_if_any)
+
     # ---------- slots ----------
 
     @Slot(object)
@@ -75,17 +84,57 @@ class MainWindow(QMainWindow):
 
     @Slot(object)
     def _on_start(self, run_config: RunConfig) -> None:
+        if not self._guard_idle():
+            return
+        built = self._build_orchestrator()
+        if built is None:
+            return
+        orch, session_path = built
+
+        worker, thread = self._wire_worker(orch)
+        thread.started.connect(lambda: worker.start_run(run_config))
+
+        self._launch(worker, thread)
+        self._remember_session_path(session_path)
+
+    @Slot(object)
+    def _on_resume(self, state: SessionState) -> None:
+        if not self._guard_idle():
+            return
+        built = self._build_orchestrator()
+        if built is None:
+            return
+        orch, session_path = built
+
+        worker, thread = self._wire_worker(orch)
+        thread.started.connect(lambda: worker.resume_run(state))
+
+        self._launch(worker, thread)
+        self._remember_session_path(session_path)
+
+    # ---------- helpers ----------
+
+    def _guard_idle(self) -> bool:
+        """Return False (and warn) if a session is already running."""
         if self._thread is not None:
             QMessageBox.warning(self, "Already running",
                                 "A session is already in progress.")
-            return
+            return False
+        return True
+
+    def _build_orchestrator(self) -> tuple[Orchestrator, Path] | None:
+        """Validate settings and build the adapter stack.
+
+        Returns (orchestrator, session_path) or None if validation
+        failed (the user has been informed and switched to Settings).
+        """
         if not self.settings.ea_path:
             QMessageBox.warning(
                 self, "EA not set",
                 "Set the EA .ex5 path on the Settings tab before starting a run.",
             )
             self.tabs.setCurrentWidget(self.settings_screen)
-            return
+            return None
         ea_path = Path(self.settings.ea_path)
         if not ea_path.is_file():
             QMessageBox.warning(
@@ -93,9 +142,8 @@ class MainWindow(QMainWindow):
                 f"The configured EA file does not exist:\n{ea_path}",
             )
             self.tabs.setCurrentWidget(self.settings_screen)
-            return
+            return None
 
-        # Build adapter stack
         paths = MT5Paths(
             install_dir=Path(self.settings.mt5_install_dir),
             project_dir=Path(self.settings.project_dir),
@@ -106,7 +154,7 @@ class MainWindow(QMainWindow):
                 f"Cannot find terminal64.exe at:\n{paths.terminal_exe}",
             )
             self.tabs.setCurrentWidget(self.settings_screen)
-            return
+            return None
 
         registry = EARegistry(version_checker=EAVersionChecker(
             post_url=self.settings.telegram_post_url,
@@ -128,7 +176,9 @@ class MainWindow(QMainWindow):
             results_dir=results_dir,
             session_path=session_path,
         )
+        return orch, session_path
 
+    def _wire_worker(self, orch: Orchestrator) -> tuple[OrchestratorWorker, QThread]:
         worker = OrchestratorWorker(orch, self.bus)
         thread = QThread()
         worker.moveToThread(thread)
@@ -140,14 +190,22 @@ class MainWindow(QMainWindow):
         worker.logLine.connect(self.run_screen.on_log_line)
         worker.sessionFinished.connect(self._on_session_finished)
         worker.crashed.connect(self._on_crashed)
+        return worker, thread
 
-        thread.started.connect(lambda: worker.start_run(run_config))
-
+    def _launch(self, worker: OrchestratorWorker, thread: QThread) -> None:
         self._thread = thread
         self._worker = worker
         self.run_screen.reset()
         self.tabs.setCurrentWidget(self.run_screen)
         thread.start()
+
+    def _remember_session_path(self, session_path: Path) -> None:
+        try:
+            self.settings.last_session_path = str(session_path)
+            save_settings(self.settings)
+        except OSError:
+            # non-fatal: resume offer at next launch just won't appear
+            pass
 
     @Slot()
     def _on_cancel(self) -> None:
@@ -172,6 +230,55 @@ class MainWindow(QMainWindow):
             self._thread.wait(2000)
         self._thread = None
         self._worker = None
+
+    # ---------- resume offer ----------
+
+    def _offer_resume_if_any(self) -> None:
+        """If a previous session has unfinished jobs, ask the user."""
+        raw = self.settings.last_session_path
+        if not raw:
+            return
+        sess_path = Path(raw)
+        if not sess_path.is_file():
+            return
+        try:
+            state = load_session(sess_path)
+        except (OSError, ValueError, KeyError, TypeError):
+            return
+
+        unfinished = sum(
+            1 for j in state.jobs
+            if j.status in (JobStatus.PENDING, JobStatus.RUNNING)
+        )
+        if unfinished == 0:
+            return
+
+        total = len(state.jobs)
+        done = state.n_done()
+        failed = state.n_failed()
+        created = state.created_at.strftime("%Y-%m-%d %H:%M")
+
+        box = QMessageBox(self)
+        box.setWindowTitle("Незавершённая сессия")
+        box.setIcon(QMessageBox.Question)
+        box.setText(
+            f"Найдена незавершённая сессия от {created}.\n"
+            f"Прогресс: {done}/{total} job(ов) готово, "
+            f"{unfinished} ожидает, {failed} с ошибкой.\n\n"
+            f"Продолжить с того же места или начать новую?"
+        )
+        resume_btn = box.addButton("Продолжить", QMessageBox.AcceptRole)
+        new_btn = box.addButton("Новая сессия", QMessageBox.DestructiveRole)
+        box.addButton("Отмена", QMessageBox.RejectRole)
+        box.setDefaultButton(resume_btn)
+        box.exec()
+
+        clicked = box.clickedButton()
+        if clicked is resume_btn:
+            self._on_resume(state)
+        elif clicked is new_btn:
+            self.tabs.setCurrentWidget(self.config_screen)
+        # else: cancel -- user can resume later via the dialog at next launch.
 
     # ---------- shutdown ----------
 
