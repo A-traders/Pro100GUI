@@ -141,7 +141,35 @@ pro100gui/
 
 ## Next steps (prioritized)
 
-1. **Publish _tst_009.ex5 to Telegram** (~external, user action).
+1. **Inno Setup installer for non-technical users** (~1 day).
+   Goal: end-user downloads one `.exe`, double-clicks Next/Install/
+   Finish, finds Pro100GUI in Start menu. No Python install, no
+   ZIP extract, no first-launch dep download.
+
+   Layout:
+   - `installer/build.py` -- fetches Python embeddable zip
+     (~30 MB) from python.org, enables `site`, bootstraps pip,
+     installs the project's runtime deps into the embedded
+     interpreter, copies app source, invokes ISCC.
+   - `installer/Pro100GUI.iss` -- Inno Setup script. Per-user
+     install (`{localappdata}\Pro100GUI`, no UAC, no admin).
+     Start-menu + desktop shortcuts that launch
+     `pythonw.exe Pro100GUI.pyw`. Standard Add/Remove Programs
+     entry with auto-generated uninstaller.
+   - Bundles every dep inside the installer (~150 MB total).
+     User gets instant startup; no online step on first launch.
+     (Bootstrap.py remains for the dev-source flow.)
+   - Output: `installer/dist/Pro100GUI-Setup-<version>.exe`.
+   - README pictures: 1) GitHub Releases page, 2) running
+     installer, 3) Start menu shortcut.
+   - SmartScreen warning on first run is accepted -- one
+     `More info → Run anyway` click. EV code-signing later if
+     we want to eliminate it.
+
+   Inno Setup 6 (`C:\Program Files (x86)\Inno Setup 6\ISCC.exe`)
+   is already on the dev machine.
+
+2. **Publish _tst_009.ex5 to Telegram** (~external, user action).
    mql-dev produced the source + .ex5 at
    `C:\Users\Администратор\TesterAgent\cache\XaurusPro100MK2_tst_009\XaurusPro100MK2_tst_009.ex5`.
    User uploads to <https://t.me/xauruspro/16>. After publication
