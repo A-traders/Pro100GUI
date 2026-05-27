@@ -14,9 +14,9 @@ only:
 
 - **Repo**: <https://github.com/imyavel/Pro100GUI> (private).
 - **Layers complete**: core / adapters / orchestrator / gui + app shell.
-- **Tests**: 221 passing on Python 3.14 (`python -m pytest tests/`).
-  Includes pytest-qt smoke tests for all 4 screens and the Resume
-  dialog decision logic.
+- **Tests**: 233 passing on Python 3.14 (`python -m pytest tests/`).
+  Includes pytest-qt smoke tests for all 4 screens, the Resume
+  dialog decision logic, and the EA _009 addfr-config flow.
 - **CI**: `no-ea-files` workflow green on every push to `main`.
 - **Stack**: Python 3.11+, PySide6, reportlab, pypdfium2, pypdf, Pillow,
   requests. Bootstrap (`bootstrap.py`) installs missing deps on first run.
@@ -37,6 +37,12 @@ only:
 11. Resume UI -- startup dialog offering to continue an unfinished session.
 12. Pytest-qt GUI tests (4 screens + resume logic) -- caught one row-merge
     bug in RunScreen along the way.
+13. EA _009 wiring -- GUI side fully ready (addfr_config writer +
+    FilesStaging hook + Orchestrator emits pro100_addfr.cfg before
+    every tester phase). EA source `_tst_009.mq5` and new include
+    `Tester_Pro100_007.mqh` produced by mql-dev (compiled clean).
+    User-side action: publish `XaurusPro100MK2_tst_009.ex5` in the
+    canonical Telegram post.
 
 ---
 
@@ -105,7 +111,8 @@ pro100gui/
 │   ├── paths.py                #   MT5Paths (install + derived dirs)
 │   ├── set_file.py             #   FixedParam/RangeParam + back/fwd/real/mm_sweep presets
 │   ├── ini_file.py             #   IniConfig + TesterModel/OptimizationMode enums
-│   ├── files_staging.py        #   stage_ea / write_set / write_ini / pro100 io
+│   ├── addfr_config.py         #   AddFrProfile + STANDARD/EXTENDED + serializer
+│   ├── files_staging.py        #   stage_ea / write_set / write_ini / pro100 io / addfr cfg
 │   ├── terminal_runner.py      #   is_running watchdog + run() with subprocess
 │   ├── ea_version_checker.py   #   Telegram embed parser + check(local_path)
 │   ├── ea_registry.py          #   EABuild + EARegistry, TESTER_BUILD / OPT_BUILD keys
@@ -134,16 +141,23 @@ pro100gui/
 
 ## Next steps (prioritized)
 
-1. **EA _009 delegation to mql-dev** (~external).
-   See `project_pro100gui_ea_v009.md` memory. Out of scope for this
-   project until the new EA is published in the Telegram channel.
-3. **MM-sweep wiring + 9-column PDF** (~1-2 days, after EA _009).
+1. **Publish _tst_009.ex5 to Telegram** (~external, user action).
+   mql-dev produced the source + .ex5 at
+   `C:\Users\Администратор\TesterAgent\cache\XaurusPro100MK2_tst_009\XaurusPro100MK2_tst_009.ex5`.
+   User uploads to <https://t.me/xauruspro/16>. After publication
+   `EAVersionChecker` will match `_009.ex5` automatically without
+   any GUI change (the checker reads the filename from the post).
+2. **MM-sweep wiring + 9-column PDF** (~1-2 days, after _009 published).
    Adds:
-   - `FilesStaging.write_addfr_config(dname, profile)` to put the
-     constants file next to `pro100.csv` before each phase.
+   - Generation of `Phase.MM_SWEEP` jobs in `SessionState`.
+   - Orchestrator branch that uses `mm_sweep_params` set + drives
+     the survivor selection through `third_pass_after_fail`.
    - New PdfRenderer mode for the v013 layout (TWR / Mo-to-x11 /
      dup-paired highlight).
    - `merge_v005_v009` in core (currently deferred).
+   AddFr config writer is already in place -- the EXTENDED profile
+   is wired in `_phase_addfr_profile`, just needs the MM_SWEEP
+   phase to actually exist.
 4. **EA download automation** (optional, ~half-day).
    Could replace manual download with Telethon if user later
    provides API_ID/HASH. Currently a deliberate "no" -- documented

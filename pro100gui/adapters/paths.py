@@ -95,6 +95,10 @@ class MT5Paths:
     def pro100_common(self, dname: str) -> Path:
         return self.common_files_dir / dname / "pro100.csv"
 
+    def addfr_cfg_local(self, dname: str) -> Path:
+        """pro100_addfr.cfg read by EA _009 to override AddFr constants."""
+        return self.files_dir / dname / "pro100_addfr.cfg"
+
     def today_log(self) -> Path:
         import datetime as _dt
         today = _dt.datetime.now().strftime("%Y%m%d")

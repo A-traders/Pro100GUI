@@ -17,6 +17,7 @@ from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from pro100gui.adapters.addfr_config import EXTENDED, STANDARD, AddFrProfile
 from pro100gui.adapters.ea_registry import TESTER_BUILD, EARegistry
 from pro100gui.adapters.files_staging import FilesStaging
 from pro100gui.adapters.ini_file import IniConfig, OptimizationMode, TesterModel
@@ -85,6 +86,18 @@ def _phase_model(phase: Phase) -> TesterModel:
     if phase == Phase.REAL:
         return TesterModel.REAL_TICKS
     return TesterModel.OPEN_PRICES_ONLY
+
+
+def _phase_addfr_profile(phase: Phase) -> AddFrProfile:
+    """Pick the AddFr profile EA _009 should run with for this phase.
+
+    BACK / FWD / REAL keep the historical _tst_008 defaults
+    (`STANDARD`); MM_SWEEP gets the wider filter (`EXTENDED`) so
+    every inp_mm pass survives deduplication.
+    """
+    if phase == Phase.MM_SWEEP:
+        return EXTENDED
+    return STANDARD
 
 
 def _phase_window(plan: TFPlan, phase: Phase, run_config: RunConfig):
@@ -255,6 +268,10 @@ class Orchestrator:
             deposit=rc.min_depo,
         )
         ini_path = self.staging.write_ini(run_id, ini_cfg)
+
+        # AddFr config (EA _009 reads from disk before each phase).
+        profile = _phase_addfr_profile(job.phase)
+        self.staging.write_addfr_config(dname, profile)
 
         # BACK is the first phase per TF -- ensure pro100.csv is clean.
         if job.phase == Phase.BACK:

@@ -19,6 +19,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from pathlib import Path
 
+from .addfr_config import AddFrProfile, serialize_addfr_config
 from .ini_file import IniConfig, write_ini_file
 from .paths import MT5Paths
 from .set_file import SetParam, write_set_file
@@ -124,6 +125,32 @@ class FilesStaging:
                 except OSError:
                     pass
         return removed
+
+    # ---------- pro100_addfr.cfg (EA _009 runtime override) ----------
+
+    def write_addfr_config(self, dname: str, profile: AddFrProfile) -> Path:
+        """Write pro100_addfr.cfg into Files\\<dname>\\.
+
+        EA _009 reads this on OnTesterInit and overrides MAX_FR /
+        BEST_MM / BEST_FT / _diff. Absent file -> EA falls back to
+        compile-time defaults, so this write is technically optional
+        for the STANDARD profile but always called for clarity.
+        """
+        dst = self.paths.addfr_cfg_local(dname)
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        dst.write_bytes(serialize_addfr_config(profile))
+        return dst
+
+    def cleanup_addfr_config(self, dname: str) -> bool:
+        """Remove pro100_addfr.cfg if present. Returns True if removed."""
+        p = self.paths.addfr_cfg_local(dname)
+        if p.is_file():
+            try:
+                p.unlink()
+                return True
+            except OSError:
+                pass
+        return False
 
     def collect_pro100_output(self, dname: str, dest: Path) -> Path | None:
         """Copy pro100.csv from MQL5\\Files\\<dname>\\ to `dest`.

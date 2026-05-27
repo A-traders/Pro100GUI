@@ -4,6 +4,7 @@ from pathlib import Path
 
 import pytest
 
+from pro100gui.adapters.addfr_config import EXTENDED, STANDARD
 from pro100gui.adapters.files_staging import FilesStaging
 from pro100gui.adapters.ini_file import IniConfig
 from pro100gui.adapters.paths import MT5Paths
@@ -143,3 +144,33 @@ def test_collect_pro100_output_missing_returns_none(tmp_path: Path, staging: Fil
     dest = tmp_path / "out" / "result.csv"
     assert staging.collect_pro100_output("never_existed", dest) is None
     assert not dest.exists()
+
+
+def test_write_addfr_config_writes_file(tmp_path: Path, staging: FilesStaging):
+    dst = staging.write_addfr_config("XAUUSD_S2_M1M5", STANDARD)
+    assert dst.is_file()
+    assert dst.name == "pro100_addfr.cfg"
+    text = dst.read_bytes().decode("ascii")
+    assert "profile: standard" in text
+    assert "MAX_FR=1000" in text
+
+
+def test_write_addfr_config_overwrites_existing(tmp_path: Path, staging: FilesStaging):
+    dname = "XAUUSD_S2_M1M5"
+    staging.write_addfr_config(dname, STANDARD)
+    staging.write_addfr_config(dname, EXTENDED)
+    dst = staging.paths.addfr_cfg_local(dname)
+    text = dst.read_bytes().decode("ascii")
+    assert "profile: extended" in text
+    assert "MAX_FR=100000" in text
+
+
+def test_cleanup_addfr_config_removes_file(tmp_path: Path, staging: FilesStaging):
+    dname = "XAUUSD_S2_M1M5"
+    staging.write_addfr_config(dname, STANDARD)
+    assert staging.cleanup_addfr_config(dname) is True
+    assert not staging.paths.addfr_cfg_local(dname).exists()
+
+
+def test_cleanup_addfr_config_returns_false_when_absent(staging: FilesStaging):
+    assert staging.cleanup_addfr_config("never_existed") is False
