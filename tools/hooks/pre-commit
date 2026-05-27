@@ -1,0 +1,22 @@
+#!/usr/bin/env bash
+# Pre-commit hook: refuse any commit that stages MT5/EA artifacts.
+# These files must never enter the repository -- they belong to a
+# private channel and are fetched at runtime.
+
+set -e
+
+forbidden_re='\.(mq5|ex5|mqh|set|ini|tst)$'
+
+staged=$(git diff --cached --name-only --diff-filter=ACMR || true)
+[ -z "$staged" ] && exit 0
+
+violations=$(printf '%s\n' "$staged" | grep -Ei "$forbidden_re" || true)
+
+if [ -n "$violations" ]; then
+  printf 'ERROR: forbidden MT5/EA file extensions staged for commit:\n' >&2
+  printf '  %s\n' $violations >&2
+  printf '\nThese must NEVER be committed. Remove from staging:\n' >&2
+  printf '  git restore --staged <file>\n' >&2
+  exit 1
+fi
+exit 0

@@ -1,0 +1,22 @@
+name: no-ea-files
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Scan tracked files for forbidden MT5/EA extensions
+        run: |
+          set -e
+          found=$(git ls-files | grep -Ei '\.(mq5|ex5|mqh|set|ini|tst)$' || true)
+          if [ -n "$found" ]; then
+            echo "FATAL: forbidden EA/MT5 files in repo:"
+            echo "$found"
+            exit 1
+          fi
+          echo "OK: no forbidden files tracked."

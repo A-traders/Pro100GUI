@@ -1,0 +1,4 @@
+* text=auto
+
+# Hooks must keep LF endings regardless of core.autocrlf
+tools/hooks/* text eol=lf
