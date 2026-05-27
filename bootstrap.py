@@ -22,6 +22,7 @@ REQUIRED = {
     "reportlab": "reportlab>=4.4",
     "pypdfium2": "pypdfium2>=4.30",
     "pypdf": "pypdf>=4.0",
+    "PIL": "Pillow>=10.0",
     "requests": "requests>=2.31",
 }
 
