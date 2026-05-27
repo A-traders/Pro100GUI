@@ -233,29 +233,42 @@ class MainWindow(QMainWindow):
 
     # ---------- resume offer ----------
 
-    def _offer_resume_if_any(self) -> None:
-        """If a previous session has unfinished jobs, ask the user."""
+    def _load_resume_candidate(self) -> SessionState | None:
+        """Return SessionState iff a Resume dialog should be offered.
+
+        Pure-logic split from `_offer_resume_if_any` so tests can
+        assert the decision without invoking QMessageBox.
+        """
         raw = self.settings.last_session_path
         if not raw:
-            return
+            return None
         sess_path = Path(raw)
         if not sess_path.is_file():
-            return
+            return None
         try:
             state = load_session(sess_path)
         except (OSError, ValueError, KeyError, TypeError):
-            return
-
+            return None
         unfinished = sum(
             1 for j in state.jobs
             if j.status in (JobStatus.PENDING, JobStatus.RUNNING)
         )
         if unfinished == 0:
+            return None
+        return state
+
+    def _offer_resume_if_any(self) -> None:
+        """If a previous session has unfinished jobs, ask the user."""
+        state = self._load_resume_candidate()
+        if state is None:
             return
 
         total = len(state.jobs)
         done = state.n_done()
         failed = state.n_failed()
+        unfinished = total - done - failed - sum(
+            1 for j in state.jobs if j.status.value == "skipped"
+        )
         created = state.created_at.strftime("%Y-%m-%d %H:%M")
 
         box = QMessageBox(self)

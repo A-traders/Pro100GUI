@@ -132,7 +132,7 @@ class RunScreen(QWidget):
     ) -> QTreeWidgetItem:
         for i in range(self.tree.topLevelItemCount()):
             it = self.tree.topLevelItem(i)
-            if it.text(0) == job_key:
+            if it.data(0, Qt.UserRole) == job_key:
                 return it
         label = job_key
         if tf and phase:
@@ -140,6 +140,7 @@ class RunScreen(QWidget):
         elif phase:
             label = _PHASE_LABELS.get(phase, phase)
         item = QTreeWidgetItem([label, "PENDING", "", "", ""])
+        item.setData(0, Qt.UserRole, job_key)
         self.tree.addTopLevelItem(item)
         return item
 

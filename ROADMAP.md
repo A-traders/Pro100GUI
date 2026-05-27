@@ -14,7 +14,9 @@ only:
 
 - **Repo**: <https://github.com/imyavel/Pro100GUI> (private).
 - **Layers complete**: core / adapters / orchestrator / gui + app shell.
-- **Tests**: 192 passing on Python 3.14 (`python -m pytest tests/`).
+- **Tests**: 221 passing on Python 3.14 (`python -m pytest tests/`).
+  Includes pytest-qt smoke tests for all 4 screens and the Resume
+  dialog decision logic.
 - **CI**: `no-ea-files` workflow green on every push to `main`.
 - **Stack**: Python 3.11+, PySide6, reportlab, pypdfium2, pypdf, Pillow,
   requests. Bootstrap (`bootstrap.py`) installs missing deps on first run.
@@ -33,6 +35,8 @@ only:
 9. Layer 3 -- EventBus, SessionState (JSON-persisted), Orchestrator.
 10. Layer 4 -- PySide6 main window with 4 screens + Qt worker thread.
 11. Resume UI -- startup dialog offering to continue an unfinished session.
+12. Pytest-qt GUI tests (4 screens + resume logic) -- caught one row-merge
+    bug in RunScreen along the way.
 
 ---
 
@@ -130,11 +134,7 @@ pro100gui/
 
 ## Next steps (prioritized)
 
-1. **Pytest-qt-based GUI tests** (~half-day).
-   Smoke-test each screen's interaction without real MT5: config
-   form -> Start -> verify worker is spawned with the right config;
-   resume dialog -> Resume -> verify worker.resume_run called; etc.
-2. **EA _009 delegation to mql-dev** (~external).
+1. **EA _009 delegation to mql-dev** (~external).
    See `project_pro100gui_ea_v009.md` memory. Out of scope for this
    project until the new EA is published in the Telegram channel.
 3. **MM-sweep wiring + 9-column PDF** (~1-2 days, after EA _009).
