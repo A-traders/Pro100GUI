@@ -55,8 +55,12 @@ results/
 *.ini
 *.tst
 
-# PDF artifacts
+# PDF artifacts (run results), but keep documentation PDFs
 *.pdf
+!docs/*.pdf
+
+# PDF render preview folders (visual QC)
+docs/_preview/
 
 # Bootstrap marker
 .bootstrap_done

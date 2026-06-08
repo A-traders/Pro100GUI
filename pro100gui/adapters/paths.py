@@ -16,7 +16,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 DEFAULT_INSTALL_DIR = Path(r"C:\Program Files\RoboForex MT5 Terminal")
-DEFAULT_PROJECT_DIR = Path(r"C:\Users\Администратор")
+DEFAULT_PROJECT_DIR = Path.home()
 
 # Staging namespace inside MQL5/* -- isolates Pro100GUI artifacts
 # from anything else the terminal may host. Mirrors TesterAgent's
