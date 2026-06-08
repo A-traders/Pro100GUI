@@ -12,7 +12,7 @@ only:
 
 ## Status (snapshot)
 
-- **Repo**: <https://github.com/imyavel/Pro100GUI> (private).
+- **Repo**: <https://github.com/A-traders/Pro100GUI> (public).
 - **Layers complete**: core / adapters / orchestrator / gui + app shell.
 - **Tests**: 233 passing on Python 3.14 (`python -m pytest tests/`).
   Includes pytest-qt smoke tests for all 4 screens, the Resume
@@ -43,6 +43,11 @@ only:
     `Tester_Pro100_007.mqh` produced by mql-dev (compiled clean).
     User-side action: publish `XaurusPro100MK2_tst_009.ex5` in the
     canonical Telegram post.
+14. Migrated to public repo `A-traders/Pro100GUI`. Cleaned
+    hardcoded `C:\Users\Администратор` defaults (now `Path.home()`),
+    rewrote README, added `docs/UserGuide.pdf` (8-page Russian
+    guide for non-technical users) + a build script so the PDF
+    can be regenerated on edits.
 
 ---
 
