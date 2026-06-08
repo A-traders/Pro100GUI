@@ -57,6 +57,13 @@ def patch_settings(monkeypatch):
 
     def install(settings: AppSettings) -> None:
         monkeypatch.setattr(mw_mod, "load_settings", lambda: settings)
+        # Silence the QTimer-scheduled startup chain so MainWindow
+        # construction does not show modal dialogs that would hang
+        # the test. We exercise _load_resume_candidate directly.
+        monkeypatch.setattr(
+            mw_mod.MainWindow, "_first_run_check_then_resume",
+            lambda self: None,
+        )
         monkeypatch.setattr(
             mw_mod.MainWindow, "_offer_resume_if_any", lambda self: None,
         )

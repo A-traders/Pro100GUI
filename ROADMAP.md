@@ -14,9 +14,10 @@ only:
 
 - **Repo**: <https://github.com/A-traders/Pro100GUI> (public).
 - **Layers complete**: core / adapters / orchestrator / gui + app shell.
-- **Tests**: 233 passing on Python 3.14 (`python -m pytest tests/`).
+- **Tests**: 244 passing on Python 3.14 (`python -m pytest tests/`).
   Includes pytest-qt smoke tests for all 4 screens, the Resume
-  dialog decision logic, and the EA _009 addfr-config flow.
+  dialog decision logic, the first-run wizard, and the EA _009
+  addfr-config flow.
 - **CI**: `no-ea-files` workflow green on every push to `main`.
 - **Stack**: Python 3.11+, PySide6, reportlab, pypdfium2, pypdf, Pillow,
   requests. Bootstrap (`bootstrap.py`) installs missing deps on first run.
@@ -45,9 +46,24 @@ only:
     canonical Telegram post.
 14. Migrated to public repo `A-traders/Pro100GUI`. Cleaned
     hardcoded `C:\Users\Администратор` defaults (now `Path.home()`),
-    rewrote README, added `docs/UserGuide.pdf` (8-page Russian
-    guide for non-technical users) + a build script so the PDF
-    can be regenerated on edits.
+    rewrote README.
+15. First-run wizard -- a modal QDialog that asks for MT5 install
+    dir + EA .ex5 path on the very first launch (or whenever
+    settings.json lacks them). Validates that terminal64.exe
+    exists in the chosen MT5 folder and that the .ex5 is a real
+    file. Cancel exits the app -- there is no useful state without
+    these two paths.
+16. Inno Setup installer -- `installer/build.py` fetches the
+    Python 3.13 embeddable zip, bootstraps pip, installs runtime
+    deps, copies the app, and invokes ISCC to produce a single
+    `Pro100GUI-Setup-X.Y.Z.exe` (~175 MB) that installs per-user
+    into `%LocalAppData%\Pro100GUI` with desktop + Start menu
+    shortcuts and a proper Add/Remove Programs entry. No admin
+    rights, no Python install on the target machine.
+17. UserGuide.pdf rewritten -- now 10 pages: 1 install, the rest
+    walk through the wizard, every tab, every field, every button,
+    explain the columns in the output PDF, and how to use the
+    chosen setups in the MT5 tester and live trading.
 
 ---
 
@@ -146,34 +162,10 @@ pro100gui/
 
 ## Next steps (prioritized)
 
-1. **Inno Setup installer for non-technical users** (~1 day).
-   Goal: end-user downloads one `.exe`, double-clicks Next/Install/
-   Finish, finds Pro100GUI in Start menu. No Python install, no
-   ZIP extract, no first-launch dep download.
-
-   Layout:
-   - `installer/build.py` -- fetches Python embeddable zip
-     (~30 MB) from python.org, enables `site`, bootstraps pip,
-     installs the project's runtime deps into the embedded
-     interpreter, copies app source, invokes ISCC.
-   - `installer/Pro100GUI.iss` -- Inno Setup script. Per-user
-     install (`{localappdata}\Pro100GUI`, no UAC, no admin).
-     Start-menu + desktop shortcuts that launch
-     `pythonw.exe Pro100GUI.pyw`. Standard Add/Remove Programs
-     entry with auto-generated uninstaller.
-   - Bundles every dep inside the installer (~150 MB total).
-     User gets instant startup; no online step on first launch.
-     (Bootstrap.py remains for the dev-source flow.)
-   - Output: `installer/dist/Pro100GUI-Setup-<version>.exe`.
-   - README pictures: 1) GitHub Releases page, 2) running
-     installer, 3) Start menu shortcut.
-   - SmartScreen warning on first run is accepted -- one
-     `More info → Run anyway` click. EV code-signing later if
-     we want to eliminate it.
-
-   Inno Setup 6 (`C:\Program Files (x86)\Inno Setup 6\ISCC.exe`)
-   is already on the dev machine.
-
+1. **Create first GitHub Release with the installer** (~user action).
+   `installer/dist/Pro100GUI-Setup-0.0.1.exe` is built and ready
+   locally. Push a v0.0.1 tag, create a Release on GitHub, attach
+   the .exe so end-users can download it from the Releases page.
 2. **Publish _tst_009.ex5 to Telegram** (~external, user action).
    mql-dev produced the source + .ex5 at
    `C:\Users\Администратор\TesterAgent\cache\XaurusPro100MK2_tst_009\XaurusPro100MK2_tst_009.ex5`.

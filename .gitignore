@@ -64,3 +64,7 @@ docs/_preview/
 
 # Bootstrap marker
 .bootstrap_done
+
+# Installer build artifacts (downloaded Python, staged app, .exe output)
+installer/work/
+installer/dist/

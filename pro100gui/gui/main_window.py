@@ -33,6 +33,7 @@ from pro100gui.orchestrator.session import (
     load_session,
 )
 
+from .first_run_wizard import FirstRunWizard, needs_first_run
 from .screen_config import ConfigScreen
 from .screen_results import ResultsScreen
 from .screen_run import RunScreen
@@ -72,8 +73,8 @@ class MainWindow(QMainWindow):
         self.run_screen.cancelRequested.connect(self._on_cancel)
         self.settings_screen.settingsChanged.connect(self._on_settings_changed)
 
-        # Offer Resume dialog once the event loop is running.
-        QTimer.singleShot(0, self._offer_resume_if_any)
+        # On first launch: ask paths, then maybe offer resume.
+        QTimer.singleShot(0, self._first_run_check_then_resume)
 
     # ---------- slots ----------
 
@@ -231,7 +232,33 @@ class MainWindow(QMainWindow):
         self._thread = None
         self._worker = None
 
-    # ---------- resume offer ----------
+    # ---------- first run + resume ----------
+
+    def _first_run_check_then_resume(self) -> None:
+        """Chain the first-run wizard then the resume dialog.
+
+        If the wizard runs and user cancels, close the app -- no
+        point continuing without MT5/EA paths. If it runs and user
+        accepts, persist settings, sync screens, then proceed to
+        the resume dialog.
+        """
+        if needs_first_run(self.settings):
+            dlg = FirstRunWizard(self.settings, parent=self)
+            if dlg.exec() != FirstRunWizard.Accepted:
+                # User chose Cancel -> exit the app entirely.
+                self.close()
+                return
+            self.settings = dlg.collected()
+            try:
+                save_settings(self.settings)
+            except OSError:
+                pass
+            self.settings_screen.reload_from_settings(self.settings)
+            self.results_screen.set_results_dir(
+                self.settings.effective_results_dir()
+            )
+
+        self._offer_resume_if_any()
 
     def _load_resume_candidate(self) -> SessionState | None:
         """Return SessionState iff a Resume dialog should be offered.

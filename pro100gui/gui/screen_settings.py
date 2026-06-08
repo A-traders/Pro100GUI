@@ -84,6 +84,19 @@ class SettingsScreen(QWidget):
 
     # ---------- actions ----------
 
+    def reload_from_settings(self, settings: AppSettings) -> None:
+        """Refresh the form fields from an externally-changed AppSettings.
+
+        Used after the FirstRunWizard fills in paths so the user
+        sees the new values when they open the Settings tab.
+        """
+        self.settings = settings
+        self.mt5_install.setText(settings.mt5_install_dir)
+        self.project_dir.setText(settings.project_dir)
+        self.results_dir.setText(settings.results_dir)
+        self.ea_path.setText(settings.ea_path)
+        self.telegram_url.setText(settings.telegram_post_url)
+
     def _collect(self) -> AppSettings:
         return AppSettings(
             mt5_install_dir=self.mt5_install.text().strip(),
