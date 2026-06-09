@@ -69,6 +69,11 @@ class ResultsScreen(QWidget):
             item.setData(Qt.UserRole, str(p))
             self.list.addItem(item)
 
+    def open_results_folder(self) -> None:
+        """Open the results dir in the system file manager."""
+        if self._results_dir and self._results_dir.is_dir():
+            self._launch(str(self._results_dir))
+
     # ---------- internal ----------
 
     def _open_selected(self) -> None:

@@ -222,6 +222,8 @@ class MainWindow(QMainWindow):
         self._thread = None
         self._worker = None
         self.results_screen.refresh()
+        if ok:
+            self.results_screen.open_results_folder()
 
     @Slot(str)
     def _on_crashed(self, msg: str) -> None:

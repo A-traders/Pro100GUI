@@ -46,3 +46,28 @@ def test_refresh_handles_missing_dir(tmp_path, screen):
     screen.set_results_dir(nonexistent)
     # Should not raise, just shows nothing.
     assert screen.list.count() == 0
+
+
+def test_open_results_folder_invokes_launch(tmp_path, screen, monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(screen, "_launch", calls.append)
+    screen.set_results_dir(tmp_path)
+    screen.open_results_folder()
+    assert calls == [str(tmp_path)]
+
+
+def test_open_results_folder_noop_when_unset(screen, monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(screen, "_launch", calls.append)
+    # No set_results_dir call -> internal state is None
+    screen.open_results_folder()
+    assert calls == []
+
+
+def test_open_results_folder_noop_when_missing(tmp_path, screen, monkeypatch):
+    calls: list[str] = []
+    monkeypatch.setattr(screen, "_launch", calls.append)
+    nonexistent = tmp_path / "nope"
+    screen.set_results_dir(nonexistent)
+    screen.open_results_folder()
+    assert calls == []
