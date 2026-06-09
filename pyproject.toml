@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "pro100gui"
-version = "0.0.1"
+version = "0.0.2"
 description = "GUI orchestrator for Pro100 MT5 strategy tester pipeline"
 readme = "README.md"
 requires-python = ">=3.11"
